@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      // Relaxing requirement if token property is missing, but prioritizing it if present
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      // Use exists() check against the dedicated admins collection
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validations
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role in ['admin', 'accountant', 'viewer'];
+    }
+
+    function isValidCaiRange(data) {
+      return data.cai is string && data.cai.size() <= 128 &&
+             data.initialRange is number && data.finalRange is number &&
+             data.status in ['ACTIVE', 'INACTIVE', 'EXPIRED', 'EXHAUSTED', 'BLOCKED'];
+    }
+
+    function isValidInvoice(data) {
+      return data.invoiceNumber is string && data.invoiceNumber.size() <= 64 &&
+             data.total is number && data.total >= 0 &&
+             data.status in ['DRAFT', 'ISSUED', 'PAID', 'SENT', 'FAILED_EMAIL', 'VOIDED', 'CANCELLED'];
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
+      allow update: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
+    }
+
+    match /admins/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false; 
+    }
+
+    match /cai_ranges/{rangeId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidCaiRange(incoming());
+      allow update: if isAdmin() && isValidCaiRange(incoming());
+      allow delete: if false;
+    }
+
+    match /invoices/{invoiceId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Broad list for now, we filter in code
+      allow create: if isSignedIn() && isValidInvoice(incoming());
+      allow update: if isSignedIn() && isValidInvoice(incoming()) && 
+                    (isAdmin() || (existing().status == 'DRAFT'));
+    }
+
+    match /bac_payments/{paymentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /customers/{customerId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (isAdmin() || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'accountant'));
+    }
+
+    match /alerts/{alertId} {
+      allow read: if isSignedIn();
+      allow update: if isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['read', 'resolved']);
+      allow create, delete: if isAdmin();
+    }
+
+    match /settings/global {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Connection Test Document
+    match /test/connection {
+      allow read: if isSignedIn();
+    }
+  }
+}

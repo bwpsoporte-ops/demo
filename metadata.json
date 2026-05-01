@@ -1,0 +1,6 @@
+{
+  "name": "BWP FiscalPay Integrator",
+  "description": "Administrative dashboard for payment integration between Storeganise, BAC, and fiscal invoicing with CAI management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

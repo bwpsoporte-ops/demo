@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Application user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "accountant", "viewer"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "CaiRange": {
+      "title": "CAI Range",
+      "description": "Authorized fiscal ranges from SAR",
+      "type": "object",
+      "properties": {
+        "cai": { "type": "string" },
+        "documentType": { "type": "string" },
+        "establishment": { "type": "string" },
+        "emissionPoint": { "type": "string" },
+        "initialRange": { "type": "number" },
+        "finalRange": { "type": "number" },
+        "currentCorrelative": { "type": "number" },
+        "authDate": { "type": "string", "format": "date" },
+        "deadlineDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "EXPIRED", "EXHAUSTED", "BLOCKED"] },
+        "branch": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["cai", "initialRange", "finalRange", "deadlineDate", "status"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Fiscal invoice record",
+      "type": "object",
+      "properties": {
+        "invoiceNumber": { "type": "string" },
+        "cai": { "type": "string" },
+        "range": { "type": "string" },
+        "issueDate": { "type": "string", "format": "date-time" },
+        "deadlineDate": { "type": "string", "format": "date" },
+        "customer": { "type": "object" },
+        "customerId": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "tax": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "bacReference": { "type": "string" },
+        "status": { "type": "string", "enum": ["DRAFT", "ISSUED", "PAID", "SENT", "FAILED_EMAIL", "VOIDED", "CANCELLED"] },
+        "pdfUrl": { "type": "string" },
+        "emailSent": { "type": "boolean" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["invoiceNumber", "cai", "customerId", "total", "status"]
+    },
+    "BacPayment": {
+      "title": "BAC Payment",
+      "description": "Payment record from BAC gateway",
+      "type": "object",
+      "properties": {
+        "bacTransactionId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["INITIATED", "PENDING", "APPROVED", "REJECTED", "FAILED", "CANCELLED", "REFUNDED"] },
+        "invoiceId": { "type": "string" },
+        "bacResponse": { "type": "object" },
+        "bankReference": { "type": "string" },
+        "syncStatus": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["bacTransactionId", "amount", "status"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer record synced from Storeganise",
+      "type": "object",
+      "properties": {
+        "storeganiseId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "company": { "type": "string" },
+        "rtn": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "country": { "type": "string" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "email"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "System alerts and notifications",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "level": { "type": "string", "enum": ["INFO", "WARNING", "CRITICAL"] },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "resolved": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "level", "message"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application and template settings",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "legalName": { "type": "string" },
+        "rtn": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "website": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "invoiceTemplate": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/admins/{uid}": { "schema": "object", "description": "Admin access control" },
+    "/cai_ranges/{rangeId}": { "schema": "CaiRange", "description": "Fiscal ranges" },
+    "/invoices/{invoiceId}": { "schema": "Invoice", "description": "Fiscal invoices" },
+    "/bac_payments/{paymentId}": { "schema": "BacPayment", "description": "BAC transactions" },
+    "/customers/{customerId}": { "schema": "Customer", "description": "Customers sync" },
+    "/alerts/{alertId}": { "schema": "Alert", "description": "System alerts" },
+    "/settings/global": { "schema": "Settings", "description": "Global app settings" }
+  }
+}
